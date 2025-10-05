@@ -1,67 +1,61 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, SafeAreaView } from 'react-native';
 import MediaList from '../components/MediaList';
 import { fetchData } from '../api';
 
 export default function MovieScreen({ navigation }) {
+  const [type, setType] = useState('popular'); // default as screenshot shows popular search results
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState('now_playing');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const options = [
-    { label: 'Now Playing', value: 'now_playing' },
     { label: 'Popular', value: 'popular' },
-    { label: 'Top Rated', value: 'top_rated' },
     { label: 'Upcoming', value: 'upcoming' },
+    { label: 'Top Rated', value: 'top_rated' },
+    { label: 'Now Playing', value: 'now_playing' },
   ];
 
-  const loadMovies = async () => {
+  const load = async (cat) => {
     setLoading(true);
-    const data = await fetchData(`/movie/${type}`);
+    const data = await fetchData(`/movie/${cat}`);
     if (data && data.results) setMovies(data.results);
+    else setMovies([]);
     setLoading(false);
   };
 
-  useEffect(() => { loadMovies(); }, [type]);
+  useEffect(() => {
+    load(type);
+  }, [type]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Movies App</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.controls}>
+        <TouchableOpacity style={styles.dropdownButton} onPress={() => setDropdownOpen(!dropdownOpen)}>
+          <Text style={styles.dropdownText}>{options.find(o => o.value === type)?.label || 'Select'}</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.dropdownButton}
-        onPress={() => setDropdownOpen(!dropdownOpen)}
-      >
-        <Text style={styles.dropdownText}>
-          {options.find((o) => o.value === type)?.label || 'Select Category'}
-        </Text>
-      </TouchableOpacity>
-
-      {dropdownOpen && (
-        <View style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={type}
-            onValueChange={(val) => { setType(val); setDropdownOpen(false); }}
-          >
-            {options.map((opt) => (
-              <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+        {dropdownOpen && (
+          <View style={styles.dropdownList}>
+            {options.map(opt => (
+              <TouchableOpacity key={opt.value} style={styles.dropdownItem} onPress={() => { setType(opt.value); setDropdownOpen(false); }}>
+                <Text>{opt.label}</Text>
+              </TouchableOpacity>
             ))}
-          </Picker>
-        </View>
-      )}
+          </View>
+        )}
+      </View>
 
-      {loading ? <ActivityIndicator size="large" style={{ marginTop: 20 }} /> :
-        <MediaList data={movies} navigation={navigation} />}
-    </View>
+      {loading ? <ActivityIndicator size="large" style={{ marginTop: 20 }} /> : <MediaList data={movies} navigation={navigation} mediaType="movie" />}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 50, backgroundColor: '#fff' },
-  heading: { fontSize: 24, fontWeight: 'bold', backgroundColor: '#001f3f', color: '#fff', padding: 10, textAlign: 'center' },
-  dropdownButton: { padding: 10, backgroundColor: '#eee', margin: 10, borderRadius: 5 },
+  container: { flex: 1, backgroundColor: '#f7f7f7' },
+  controls: { padding: 12 },
+  dropdownButton: { padding: 10, backgroundColor: '#fff', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
   dropdownText: { fontSize: 16 },
-  pickerWrapper: { backgroundColor: '#fff', marginHorizontal: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 5 },
+  dropdownList: { marginTop: 8, backgroundColor: '#fff', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
+  dropdownItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
 });
